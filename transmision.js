@@ -1,5 +1,5 @@
 // URL de la hoja de cálculo en GitHub
-const spreadsheetURL = 'https://raw.githubusercontent.com/tu-usuario/tu-repositorio/datos/hoja_de_calculo.csv';
+const spreadsheetURL = 'https://raw.githubusercontent.com/Konaruchan/Nyoe-TV/hoja_de_calculo.csv';
 
 // Función para cargar y procesar los datos de la hoja de cálculo
 async function procesarHojaDeCalculo() {
