@@ -43,25 +43,36 @@
                 const data = await fetchExcelFile();
                 const filas = data.slice(1);
                 const horaActual = new Date().getHours();
+                const minutoActual = new Date().getMinutes();
+                const horaMinutoActual = horaActual * 60 + minutoActual;
 
-                let serieActual = null;
+                let serieMasCercana = null;
+                let horaMasCercana = Infinity;
+
                 filas.forEach(fila => {
                     const horaInicio = parseInt(fila[0].split(':')[0]);
-                    const nombreSerie = fila[1];
-                    if (horaInicio <= horaActual) {
-                        serieActual = {
-                            nombre: nombreSerie,
+                    const minutoInicio = parseInt(fila[0].split(':')[1]);
+                    const horaMinutoInicio = horaInicio * 60 + minutoInicio;
+
+                    // Calcular la diferencia de tiempo entre la serie y la hora actual
+                    const diferenciaTiempo = Math.abs(horaMinutoInicio - horaMinutoActual);
+
+                    // Actualizar la serie más cercana si se encuentra una más cercana
+                    if (diferenciaTiempo < horaMasCercana) {
+                        serieMasCercana = {
+                            nombre: fila[1],
                             bumper: fila[2],
                             archivoEpisodios: fila[3],
                             archivoProgreso: fila[4]
                         };
+                        horaMasCercana = diferenciaTiempo;
                     }
                 });
 
-                if (serieActual) {
-                    console.log('La serie a transmitir es:', serieActual.nombre);
-                    await reproducirBumper(serieActual.bumper);
-                    await reproducirEpisodios(serieActual.archivoEpisodios, serieActual.archivoProgreso);
+                if (serieMasCercana) {
+                    console.log('La serie a transmitir es:', serieMasCercana.nombre);
+                    await reproducirBumper(serieMasCercana.bumper);
+                    await reproducirEpisodios(serieMasCercana.archivoEpisodios, serieMasCercana.archivoProgreso);
                 } else {
                     console.log('No hay series programadas para esta hora.');
                 }
