@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Transmisión de Series</title>
+    <style>
+        #video-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            background-color: black;
+        }
+        video {
+            width: 80%;
+            height: auto;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div id="video-container"></div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.16.9/xlsx.full.min.js"></script>
+
+    <script>
+        const spreadsheetURL = 'https://raw.githubusercontent.com/tu-usuario/tu-repositorio/main/series_schedule.xlsx';
+
+        async function fetchExcelFile() {
+            const response = await fetch(spreadsheetURL);
+            const arrayBuffer = await response.arrayBuffer();
+            const data = new Uint8Array(arrayBuffer);
+            const workbook = XLSX.read(data, { type: 'array' });
+            const sheetName = workbook.SheetNames[0];
+            const worksheet = workbook.Sheets[sheetName];
+            return XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+        }
+
+        async function procesarHojaDeCalculo() {
+            try {
+                const data = await fetchExcelFile();
+                const filas = data.slice(1);
+                const horaActual = new Date().getHours();
+
+                let serieActual = null;
+                filas.forEach(fila => {
+                    const horaInicio = parseInt(fila[0].split(':')[0]);
+                    const nombreSerie = fila[1];
+                    if (horaInicio <= horaActual) {
+                        serieActual = {
+                            nombre: nombreSerie,
+                            bumper: fila[2],
+                            archivoEpisodios: fila[3],
+                            archivoProgreso: fila[4]
+                        };
+                    }
+                });
+
+                if (serieActual) {
+                    console.log('La serie a transmitir es:', serieActual.nombre);
+                    await reproducirBumper(serieActual.bumper);
+                    await reproducirEpisodios(serieActual.archivoEpisodios, serieActual.archivoProgreso);
+                } else {
+                    console.log('No hay series programadas para esta hora.');
+                }
+            } catch (error) {
+                console.error('Error al procesar la hoja de cálculo:', error);
+            }
+        }
+
+        async function reproducirBumper(archivoBumper) {
+            return new Promise((resolve) => {
+                const videoContainer = document.getElementById('video-container');
+                const video = document.createElement('video');
+                video.src = `Bumpers/${archivoBumper}`;
+                video.controls = false;
+                video.autoplay = true;
+                video.loop = false;
+                videoContainer.innerHTML = '';
+                videoContainer.appendChild(video);
+                video.onended = () => {
+                    resolve();
+                };
+            });
+        }
+
+        async function reproducirEpisodios(archivoEpisodios, archivoProgreso) {
+            const response = await fetch(`Useful_info/${archivoProgreso}`);
+            const progreso = await response.text();
+            const ultimoEpisodio = progreso ? parseInt(progreso) : 0;
+
+            const responseEpisodios = await fetch(`Series/${archivoEpisodios}`);
+            const episodios = await responseEpisodios.text();
+            const episodiosLista = episodios.split('\n');
+
+            for (let i = ultimoEpisodio; i < episodiosLista.length; i++) {
+                const [numero, link, duracion] = episodiosLista[i].split(' - ');
+                await reproducirVideo(link.replace(/"/g, ''));
+                await reproducirFakeAds();
+
+                await fetch(`Useful_info/${archivoProgreso}`, {
+                    method: 'PUT',
+                    body: (i + 1).toString(),
+                });
+
+                if ((i - ultimoEpisodio + 1) % 2 === 0) {
+                    break;
+                }
+            }
+        }
+
+        function reproducirVideo(link) {
+            return new Promise((resolve) => {
+                const videoContainer = document.getElementById('video-container');
+                const video = document.createElement('video');
+                video.src = link;
+                video.controls = false;
+                video.autoplay = true;
+                video.loop = false;
+                videoContainer.innerHTML = '';
+                videoContainer.appendChild(video);
+                video.onended = () => {
+                    resolve();
+                };
+            });
+        }
+
+        async function reproducirFakeAds() {
+            const videoContainer = document.getElementById('video-container');
+            const fakeAds = ['ad1.mp4', 'ad2.mp4', 'ad3.mp4', 'ad4.mp4', 'ad5.mp4'];
+            const numeroAds = Math.floor(Math.random() * 4) + 2;
+            const adsSeleccionados = [];
+
+            while (adsSeleccionados.length < numeroAds) {
+                const ad = fakeAds[Math.floor(Math.random() * fakeAds.length)];
+                if (!adsSeleccionados.includes(ad)) {
+                    adsSeleccionados.push(ad);
+                }
+            }
+
+            for (let i = 0; i < adsSeleccionados.length; i++) {
+                const ad = adsSeleccionados[i];
+
+                await new Promise((resolve) => {
+                    const video = document.createElement('video');
+                    video.src = `Fake_ads/${ad}`;
+                    video.controls = false;
+                    video.autoplay = true;
+                    video.loop = false;
+                    videoContainer.innerHTML = '';
+                    videoContainer.appendChild(video);
+                    video.onended = () => {
+                        resolve();
+                    };
+                });
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', procesarHojaDeCalculo);
+    </script>
+</body>
+</html>
