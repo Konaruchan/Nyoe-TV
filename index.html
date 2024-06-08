@@ -41,31 +41,36 @@
         async function procesarHojaDeCalculo() {
             try {
                 const data = await fetchExcelFile();
-                const filas = data.slice(1);
+                const filas = data.slice(1); // Ignorar la primera fila (encabezados)
                 const horaActual = new Date().getHours();
                 const minutoActual = new Date().getMinutes();
-                const horaMinutoActual = horaActual * 60 + minutoActual;
+                const segundoActual = new Date().getSeconds();
+                const horaMinutoSegundoActual = horaActual * 3600 + minutoActual * 60 + segundoActual;
 
                 let serieMasCercana = null;
-                let horaMasCercana = Infinity;
+                let tiempoMasCercano = Infinity;
 
                 filas.forEach(fila => {
-                    const horaInicio = parseInt(fila[0].split(':')[0]);
-                    const minutoInicio = parseInt(fila[0].split(':')[1]);
-                    const horaMinutoInicio = horaInicio * 60 + minutoInicio;
+                    if (typeof fila[0] === 'string') {
+                        const [horaStr, minutoStr, segundoStr] = fila[0].split(':');
+                        const horaInicio = parseInt(horaStr);
+                        const minutoInicio = parseInt(minutoStr);
+                        const segundoInicio = parseInt(segundoStr);
+                        const horaMinutoSegundoInicio = horaInicio * 3600 + minutoInicio * 60 + segundoInicio;
 
-                    // Calcular la diferencia de tiempo entre la serie y la hora actual
-                    const diferenciaTiempo = Math.abs(horaMinutoInicio - horaMinutoActual);
+                        // Calcular la diferencia de tiempo entre la serie y la hora actual
+                        const diferenciaTiempo = Math.abs(horaMinutoSegundoInicio - horaMinutoSegundoActual);
 
-                    // Actualizar la serie más cercana si se encuentra una más cercana
-                    if (diferenciaTiempo < horaMasCercana) {
-                        serieMasCercana = {
-                            nombre: fila[1],
-                            bumper: fila[2],
-                            archivoEpisodios: fila[3],
-                            archivoProgreso: fila[4]
-                        };
-                        horaMasCercana = diferenciaTiempo;
+                        // Actualizar la serie más cercana si se encuentra una más cercana
+                        if (diferenciaTiempo < tiempoMasCercano) {
+                            serieMasCercana = {
+                                nombre: fila[1],
+                                bumper: fila[2],
+                                archivoEpisodios: fila[3],
+                                archivoProgreso: fila[4]
+                            };
+                            tiempoMasCercano = diferenciaTiempo;
+                        }
                     }
                 });
 
@@ -173,3 +178,4 @@
     </script>
 </body>
 </html>
+
